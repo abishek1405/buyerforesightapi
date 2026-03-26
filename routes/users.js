@@ -2,79 +2,87 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 
-// GET all users (search + sort)
+// GET all users
 router.get("/", (req, res) => {
-  let query = "SELECT * FROM users";
-  const params = [];
+  try {
+    let query = "SELECT * FROM users";
 
-  if (req.query.search) {
-    query += " WHERE name LIKE ?";
-    params.push(`%${req.query.search}%`);
+    if (req.query.search) {
+      query += ` WHERE name LIKE '%${req.query.search}%'`;
+    }
+
+    if (req.query.sort) {
+      query += ` ORDER BY ${req.query.sort} ${req.query.order || "ASC"}`;
+    }
+
+    const users = db.prepare(query).all();
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  if (req.query.sort) {
-    query += ` ORDER BY ${req.query.sort} ${req.query.order || "ASC"}`;
-  }
-
-  db.all(query, params, (err, rows) => {
-    if (err) return res.status(500).json(err);
-    res.json(rows);
-  });
 });
 
 // GET user by ID
 router.get("/:id", (req, res) => {
-  db.get("SELECT * FROM users WHERE id = ?", [req.params.id], (err, row) => {
-    if (err) return res.status(500).json(err);
-    if (!row) return res.status(404).json({ message: "User not found" });
+  try {
+    const user = db
+      .prepare("SELECT * FROM users WHERE id = ?")
+      .get(req.params.id);
 
-    res.json(row);
-  });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // POST create user
 router.post("/", (req, res) => {
-  const { name, email, age, city } = req.body;
+  try {
+    const { name, email, age, city } = req.body;
 
-  db.run(
-    "INSERT INTO users (name, email, age, city) VALUES (?, ?, ?, ?)",
-    [name, email, age, city],
-    function (err) {
-      if (err) return res.status(500).json(err);
+    const result = db
+      .prepare(
+        "INSERT INTO users (name, email, age, city) VALUES (?, ?, ?, ?)"
+      )
+      .run(name, email, age, city);
 
-      res.json({
-        id: this.lastID,
-        name,
-        email,
-        age,
-        city
-      });
-    }
-  );
+    res.json({
+      id: result.lastInsertRowid,
+      name,
+      email,
+      age,
+      city,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // PUT update user
 router.put("/:id", (req, res) => {
-  const { name, email, age, city } = req.body;
+  try {
+    const { name, email, age, city } = req.body;
 
-  db.run(
-    "UPDATE users SET name=?, email=?, age=?, city=? WHERE id=?",
-    [name, email, age, city, req.params.id],
-    function (err) {
-      if (err) return res.status(500).json(err);
+    db.prepare(
+      "UPDATE users SET name=?, email=?, age=?, city=? WHERE id=?"
+    ).run(name, email, age, city, req.params.id);
 
-      res.json({ message: "User updated" });
-    }
-  );
+    res.json({ message: "User updated" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // DELETE user
 router.delete("/:id", (req, res) => {
-  db.run("DELETE FROM users WHERE id=?", [req.params.id], function (err) {
-    if (err) return res.status(500).json(err);
-
+  try {
+    db.prepare("DELETE FROM users WHERE id=?").run(req.params.id);
     res.json({ message: "User deleted" });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;
