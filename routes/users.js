@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 
-// GET all users
+
 router.get("/", (req, res) => {
   try {
     let query = "SELECT * FROM users";
@@ -22,7 +22,7 @@ router.get("/", (req, res) => {
   }
 });
 
-// GET user by ID
+
 router.get("/:id", (req, res) => {
   try {
     const user = db
@@ -37,7 +37,7 @@ router.get("/:id", (req, res) => {
   }
 });
 
-// POST create user
+
 router.post("/", (req, res) => {
   try {
     const { name, email, age, city } = req.body;
@@ -60,7 +60,7 @@ router.post("/", (req, res) => {
   }
 });
 
-// PUT update user
+
 router.put("/:id", (req, res) => {
   try {
     const { name, email, age, city } = req.body;
@@ -75,7 +75,7 @@ router.put("/:id", (req, res) => {
   }
 });
 
-// DELETE user
+
 router.delete("/:id", (req, res) => {
   try {
     db.prepare("DELETE FROM users WHERE id=?").run(req.params.id);
